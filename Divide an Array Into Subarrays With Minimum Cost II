@@ -1,0 +1,76 @@
+class Solution:
+    def minimumCost(self, nums: List[int], k: int, dist: int) -> int:
+        need = k - 1
+        small = []
+        large = []
+        delayed_small = Counter()
+        delayed_large = Counter()
+        small_sum = 0
+        small_size = 0
+        large_size = 0
+
+        def prune_small():
+            while small and delayed_small[-small[0]] > 0:
+                x = -heapq.heappop(small)
+                delayed_small[x] -= 1
+
+        def prune_large():
+            while large and delayed_large[large[0]] > 0:
+                x = heapq.heappop(large)
+                delayed_large[x] -= 1
+
+        def balance():
+            nonlocal small_size, large_size, small_sum
+            if small_size > need:
+                prune_small()
+                x = -heapq.heappop(small)
+                small_sum -= x
+                small_size -= 1
+                heapq.heappush(large, x)
+                large_size += 1
+            elif small_size < need and large_size > 0:
+                prune_large()
+                x = heapq.heappop(large)
+                small_sum += x
+                large_size -= 1
+                heapq.heappush(small, -x)
+                small_size += 1
+
+        def add(x):
+            nonlocal small_sum, small_size, large_size
+            if small_size == 0 or x <= -small[0]:
+                heapq.heappush(small, -x)
+                small_sum += x
+                small_size += 1
+            else:
+                heapq.heappush(large, x)
+                large_size += 1
+            balance()
+
+        def remove(x):
+            nonlocal small_sum, small_size, large_size
+            if x <= -small[0]:
+                delayed_small[x] += 1
+                small_sum -= x
+                small_size -= 1
+                if -small[0] == x:
+                    prune_small()
+            else:
+                delayed_large[x] += 1
+                large_size -= 1
+                if large and large[0] == x:
+                    prune_large()
+            balance()
+
+        ans = float('inf')
+        left = 1
+
+        for right in range(1, len(nums)):
+            add(nums[right])
+            while right - left > dist:
+                remove(nums[left])
+                left += 1
+            if small_size == need:
+                ans = min(ans, small_sum)
+
+        return ans + nums[0]
