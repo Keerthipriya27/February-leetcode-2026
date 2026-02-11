@@ -1,0 +1,130 @@
+class LazyTag:
+    def __init__(self):
+        self.to_add = 0
+
+    def add(self, other):
+        self.to_add += other.to_add
+        return self
+
+    def has_tag(self):
+        return self.to_add != 0
+
+    def clear(self):
+        self.to_add = 0
+
+
+class SegmentTreeNode:
+    def __init__(self):
+        self.min_value = 0
+        self.max_value = 0
+        self.lazy_tag = LazyTag()
+
+
+class SegmentTree:
+    def __init__(self, data):
+        self.n = len(data)
+        self.tree = [SegmentTreeNode() for _ in range(self.n * 4 + 1)]
+        self._build(data, 1, self.n, 1)
+
+    def add(self, l, r, val):
+        if l > r:
+            return
+        tag = LazyTag()
+        tag.to_add = val
+        self._update(l, r, tag, 1, self.n, 1)
+
+    def find_last(self, start, val):
+        if start > self.n:
+            return -1
+        return self._find(start, self.n, val, 1, self.n, 1)
+
+    def _apply_tag(self, i, tag):
+        self.tree[i].min_value += tag.to_add
+        self.tree[i].max_value += tag.to_add
+        self.tree[i].lazy_tag.add(tag)
+
+    def _pushdown(self, i):
+        if self.tree[i].lazy_tag.has_tag():
+            tag = LazyTag()
+            tag.to_add = self.tree[i].lazy_tag.to_add
+            self._apply_tag(i << 1, tag)
+            self._apply_tag((i << 1) | 1, tag)
+            self.tree[i].lazy_tag.clear()
+
+    def _pushup(self, i):
+        self.tree[i].min_value = min(
+            self.tree[i << 1].min_value, self.tree[(i << 1) | 1].min_value
+        )
+        self.tree[i].max_value = max(
+            self.tree[i << 1].max_value, self.tree[(i << 1) | 1].max_value
+        )
+
+    def _build(self, data, l, r, i):
+        if l == r:
+            self.tree[i].min_value = data[l - 1]
+            self.tree[i].max_value = data[l - 1]
+            return
+        mid = (l + r) >> 1
+        self._build(data, l, mid, i << 1)
+        self._build(data, mid + 1, r, (i << 1) | 1)
+        self._pushup(i)
+
+    def _update(self, L, R, tag, l, r, i):
+        if L <= l and r <= R:
+            self._apply_tag(i, tag)
+            return
+        self._pushdown(i)
+        mid = (l + r) >> 1
+        if L <= mid:
+            self._update(L, R, tag, l, mid, i << 1)
+        if R > mid:
+            self._update(L, R, tag, mid + 1, r, (i << 1) | 1)
+        self._pushup(i)
+
+    def _find(self, L, R, val, l, r, i):
+        if self.tree[i].min_value > val or self.tree[i].max_value < val:
+            return -1
+        if l == r:
+            return l
+        self._pushdown(i)
+        mid = (l + r) >> 1
+        if R > mid:
+            res = self._find(L, R, val, mid + 1, r, (i << 1) | 1)
+            if res != -1:
+                return res
+        if L <= mid:
+            return self._find(L, R, val, l, mid, i << 1)
+        return -1
+
+
+class Solution:
+    def longestBalanced(self, nums: List[int]) -> int:
+        def sgn(x):
+            return 1 if x % 2 == 0 else -1
+
+        n = len(nums)
+        occurrences = defaultdict(deque)
+
+        prefix = [0] * n
+        prefix[0] = sgn(nums[0])
+        occurrences[nums[0]].append(1)
+
+        for i in range(1, n):
+            prefix[i] = prefix[i - 1]
+            if not occurrences[nums[i]]:
+                prefix[i] += sgn(nums[i])
+            occurrences[nums[i]].append(i + 1)
+
+        seg = SegmentTree(prefix)
+        ans = 0
+
+        for i in range(n):
+            pos = seg.find_last(i + ans, 0)
+            if pos != -1:
+                ans = max(ans, pos - i)
+
+            occurrences[nums[i]].popleft()
+            next_pos = occurrences[nums[i]][0] if occurrences[nums[i]] else n + 1
+            seg.add(i + 1, next_pos - 1, -sgn(nums[i]))
+
+        return ans
