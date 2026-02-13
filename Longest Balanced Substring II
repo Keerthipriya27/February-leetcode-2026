@@ -1,0 +1,67 @@
+class Solution:
+    def single_char(self, text: str) -> int:
+        if not text:
+            return 0
+        streak = 1
+        max_len = 1
+        for i in range(1, len(text)):
+            if text[i] == text[i - 1]:
+                streak += 1
+            else:
+                streak = 1
+            max_len = max(max_len, streak)
+        return max_len
+
+    def two_chars(self, text: str, ch1: str, ch2: str) -> int:
+        balance_map = {0: -1}
+        max_len = 0
+        balance = 0
+        for idx, char in enumerate(text):
+            if char != ch1 and char != ch2:
+                balance_map.clear()
+                balance_map[0] = idx
+                balance = 0
+                continue
+
+            if char == ch1:
+                balance += 1
+            else:
+                balance -= 1
+
+            if balance in balance_map:
+                max_len = max(max_len, idx - balance_map[balance])
+            else:
+                balance_map[balance] = idx
+
+        return max_len
+
+    def three_chars(self, text: str) -> int:
+        count_x = count_y = count_z = 0
+        diff_map = {(0, 0): -1}
+        max_len = 0
+
+        for idx, char in enumerate(text):
+            if char == 'a':
+                count_x += 1
+            elif char == 'b':
+                count_y += 1
+            else:  # 'c'
+                count_z += 1
+
+            key = (count_y - count_x, count_z - count_x)
+
+            if key in diff_map:
+                max_len = max(max_len, idx - diff_map[key])
+            else:
+                diff_map[key] = idx
+
+        return max_len
+
+    def longestBalanced(self, text: str) -> int:
+        return max(
+            self.single_char(text),
+            self.two_chars(text, 'a', 'b'),
+            self.two_chars(text, 'a', 'c'),
+            self.two_chars(text, 'b', 'c'),
+            self.three_chars(text)
+        )
