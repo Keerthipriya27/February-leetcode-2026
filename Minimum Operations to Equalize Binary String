@@ -1,0 +1,11 @@
+class Solution:
+    def minOperations(self, s: str, k: int) -> int:
+        z = s.count('0')        
+        if z == 0:
+            return 0       
+        t = (z + k - 1) // k        
+        while (t * k - z) % 2 != 0:
+            t += 1
+            if t > len(s):
+                return -1       
+        return t
